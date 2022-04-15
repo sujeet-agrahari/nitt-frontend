@@ -31,6 +31,10 @@ const Login = () => {
       });
   }
   return <div className="login">
+    <div className="logo">
+      <h1>NITTI</h1>
+      <h3>National Information Technology Training Institute</h3>
+    </div>
     <form onSubmit={handleLogin}>
       <input type="email" placeholder="email" onChange={(e) => setEmail(e.target.value)} />
       <input type="password" placeholder="password" onChange={(e) => setPassword(e.target.value)} />

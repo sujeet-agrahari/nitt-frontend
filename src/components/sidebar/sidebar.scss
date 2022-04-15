@@ -12,7 +12,7 @@
     border-bottom: 0.5px solid rgb(230, 227, 227);
 
     .logo {
-      font-size: 20px;
+      font-size: 30px;
       font-weight: bold;
       color: #6439ff;
     }
@@ -27,7 +27,7 @@
       padding: 0;
 
       .title {
-        font-size: 10px;
+        font-size: 14px;
         font-weight: bold;
         color: #999;
         margin-top: 15px;
@@ -38,6 +38,7 @@
         display: flex;
         align-items: center;
         padding: 5px;
+        font-size: 16px;
         cursor: pointer;
 
         &:hover {
@@ -50,7 +51,7 @@
         }
 
         span {
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 600;
           color: #888;
           margin-left: 10px;

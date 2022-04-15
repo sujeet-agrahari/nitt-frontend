@@ -4,25 +4,47 @@
   align-items: center;
   justify-content: center;
 
+  .logo {
+    display: flex;
+    margin-right: 100px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: teal;
+
+    h1 {
+      margin-bottom: 5px;
+    }
+  }
+
   form {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    -webkit-box-shadow: 2px 4px 10px 1px rgba(0, 0, 0, 0.47);
+    box-shadow: 2px 4px 10px 1px rgba(201, 201, 201, 0.47);
+    padding: 20px;
+    border-radius: 5px;
+    height: 300px;
+    width: 350px;
 
     input {
-      width: 200px;
+      width: 300px;
       height: 30px;
       margin: 10px;
+      padding: 5px;
     }
 
     button {
       width: 200px;
-      height: 30px;
+      height: 40px;
       border: none;
-      background-color: teal;
+      background-color: indigo;
       color: white;
       font-weight: bold;
       cursor: pointer;
+      border-radius: 5px;
     }
 
     span {
