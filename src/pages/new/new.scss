@@ -38,6 +38,11 @@
           flex-wrap: wrap;
           gap: 25px;
 
+          .inputGroup {
+            display: flex;
+            justify-content: space-between;
+          }
+
           .formInput {
             width: 40%;
 

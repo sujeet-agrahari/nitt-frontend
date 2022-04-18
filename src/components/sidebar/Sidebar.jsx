@@ -54,10 +54,13 @@ const Sidebar = () => {
               <span>Courses</span>
             </li>
           </Link>
-          <li>
-            <CurrencyRupeeIcon className="icon" />
-            <span>Fees</span>
-          </li>
+          <Link to="/fees" style={{ textDecoration: "none" }}>
+            <li>
+              <CurrencyRupeeIcon className="icon" />
+              <span>Fees</span>
+            </li>
+          </Link>
+
           <li>
             <NotificationsIcon className="icon" />
             <span>Notification</span>
