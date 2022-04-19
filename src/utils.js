@@ -3,6 +3,8 @@ export const capitalizeFirstLetter = (string) => {
 }
 
 export const getDate = (date) => {
+  console.log(date)
+  date = new Date(date);
   return date.toISOString().replace(/T.*/, '').split('-').reverse().join('-')
 }
 

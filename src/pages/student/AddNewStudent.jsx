@@ -2,13 +2,8 @@ import Navbar from "../../components/navbar/Navbar";
 import Sidebar from "../../components/sidebar/Sidebar";
 import "./addNewStudent.scss";
 import { useEffect, useState } from "react";
-import {
-  addDoc,
-  collection,
-  onSnapshot,
-} from "firebase/firestore";
-import { db, storage } from "../../firebase";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { addDoc, collection, onSnapshot } from "firebase/firestore";
+import { db, uploadFile } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -20,134 +15,108 @@ import {
   InputLabel,
   FormControl,
   Typography,
+  Stack,
 } from "@mui/material";
 import { Box } from "@mui/system";
 import { styled } from "@mui/system";
 
 import { pick } from "lodash";
 
+import { Controller, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+
 const Input = styled("input")({
   display: "none",
 });
+const schema = yup
+  .object({
+    firstName: yup.string().required("Field is required!"),
+    middleName: yup.string().required("Field is required!"),
+    lastName: yup.string().required("Field is required!"),
+    fatherName: yup.string().required("Field is required!"),
+    motherName: yup.string().required("Field is required!"),
+    paidFees: yup.number().positive().integer().required("Field is required!"),
+    phone: yup.string().matches(/^[6-9]{1}[0-9]{9}$/, "Invalid phone number!").required("Field is required!"),
+    dateOfBirth: yup.date().required("Field is required"),
+    address: yup.string().required("Field is required"),
+    discount: yup.number().integer().min(0),
+    photo: yup.mixed().test("photo", "Photo is required!", (value) => value && value.length > 0),
+    courseId: yup.string().required('Select course'),
+    email: yup.string().email("Invalid email!").nullable().default(null),
+    totalFees: yup.number().typeError("Total fees required, select course!").positive("Total fees required, select course!").required("Total fees required, select course!")
+  })
+  .required();
 
-const AddNewStudent = ({ inputs, title }) => {
-  const [file, setFile] = useState("");
-  const [data, setData] = useState({});
-  const [percentage, setPercentage] = useState(0);
+const AddNewStudent = () => {
   const [courses, setCourses] = useState([]);
 
-  const [selectedCourse, setSelectedCourse] = useState("");
-
-  const handleCourseSelect = (e) => {
-    setData((prev) => ({ ...prev, [e.target.name]: e.target.value.id }));
-    setSelectedCourse({ ...e.target.value, fees: +e.target.value.fees });
-  }
-
+  const {
+    control,
+    formState: { errors },
+    handleSubmit,
+    setValue
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: "all"
+  });
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "courses"), (snapshot) => {
-      const list = [];
-      snapshot.docs.forEach((doc) => list.push({ id: doc.id, ...doc.data() }))
-      setCourses(list)
-    }, (error) => {
-      console.log(error)
-    });
+    const unsub = onSnapshot(
+      collection(db, "courses"),
+      (snapshot) => {
+        const list = [];
+        snapshot.docs.forEach((doc) =>
+          list.push({ id: doc.id, ...doc.data() })
+        );
+        setCourses(list);
+      },
+      (error) => {
+        console.log(error);
+      }
+    );
     return () => unsub();
   }, []);
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const uploadFile = () => {
-      const storageRef = ref(storage, file.name + new Date());
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      // Register three observers:
-      // 1. 'state_changed' observer, called any time the state changes
-      // 2. Error observer, called on failure
-      // 3. Completion observer, called on successful completion
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          // Observe state change events such as progress, pause, and resume
-          // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log("Upload is " + progress + "% done");
-          setPercentage(progress);
-          switch (snapshot.state) {
-            case "paused":
-              console.log("Upload is paused");
-              break;
-            case "running":
-              console.log("Upload is running");
-              break;
-            default:
-              break;
-          }
-        },
-        (error) => {
-          // Handle unsuccessful uploads
-          console.log(error);
-        },
-        () => {
-          // Handle successful uploads on complete
-          // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            setData((prev) => ({ ...prev, photo: downloadURL }));
-          });
-        }
-      );
-    };
-    file && uploadFile();
-  }, [file]);
-
-  const handleAdd = async (e) => {
-    e.preventDefault();
+  const handleAdd = async (data) => {
     try {
-      const student = await addDoc(
-        collection(db, "students"),
-        {
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          ...pick(data, [
-            "email",
-            "photo",
-            "phone",
-            "address",
-            "lastName",
-            "firstName",
-            "fatherName",
-            "middleName",
-            "motherName",
-            "dateOfBirth",
-          ])
-        }
-      );
+      // upload the file
+      data.photo = await uploadFile(data.photo[0], data.phone);
+      const student = await addDoc(collection(db, "students"), {
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...pick(data, [
+          "email",
+          "photo",
+          "phone",
+          "address",
+          "lastName",
+          "firstName",
+          "fatherName",
+          "middleName",
+          "motherName",
+          "dateOfBirth",
+        ]),
+      });
       const enrollment = await addDoc(collection(db, "enrollments"), {
         studentId: student.id,
         ...pick(data, ["courseId"]),
         createdAt: new Date(),
         updatedAt: new Date(),
-        totalFees: selectedCourse.fees - (selectedCourse.fees * (+data.discount) / 100)
+        totalFees: 1000
       });
       await addDoc(collection(db, "fees"), {
         createdAt: new Date(),
         updatedAt: new Date(),
-        ...pick(data, ['paidFees']),
+        ...pick(data, ["paidFees"]),
         enrollmentId: enrollment.id,
-      })
+      });
       navigate(-1);
     } catch (error) {
       console.log(error);
     }
   };
-
-  const handleInput = (e) => {
-    const name = e.target.name;
-    const value = e.target.value;
-    setData({ ...data, [name]: value });
-  };
-
 
   return (
     <div className="new">
@@ -168,183 +137,293 @@ const AddNewStudent = ({ inputs, title }) => {
           }}
           noValidate
           autoComplete="off"
-          onSubmit={handleAdd}
+          onSubmit={handleSubmit(handleAdd)}
         >
           <div className="photo">
-            <Avatar
-              src={
-                file
-                  ? URL.createObjectURL(file)
-                  : "https://icon-library.com/images/no-image-icon/no-image-icon-0.jpg"
-              }
-              alt="photo preview"
-              sx={{ width: "200px", height: "200px" }}
+            <Controller
+              name="photo"
+              control={control}
+              render={({ field: { value, onChange, ...fieldProps } }) => (
+                <Stack gap={2}>
+                  <Avatar
+                    sx={{ width: 200, height: 200 }}
+                    src={
+                      value && value.length
+                        ? URL.createObjectURL(value[0])
+                        : 'https://icon-library.com/images/no-image-icon/no-image-icon-0.jpg'
+                    }
+                    alt="files preview"
+                  />
+                  <label htmlFor="files">
+                    <Input
+                      {...fieldProps}
+                      onChange={(event) => onChange(event.target.files)}
+                      type="file"
+                      accept="image/*"
+                      id="files"
+                      multiple
+                    />
+                    <Button variant="contained" component="span">
+                      Upload
+                    </Button>
+                    {errors.photo && <Typography variant="caption" display="block" color="crimson" gutterBottom>
+                      {errors.photo.message}
+                    </Typography>
+                    }
+                  </label>
+                </Stack>
+              )}
             />
-            <label htmlFor="contained-button-file">
-              <Input
-                accept="image/*"
-                id="contained-button-file"
-                multiple
-                type="file"
-                onChange={(e) => setFile(e.target.files[0])}
-              />
-              <Button variant="contained" component="span">
-                Upload
-              </Button>
-            </label>
           </div>
           <div className="formInput">
             <Grid container spacing={4}>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="firstName"
-                  label="First Name"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="First Name"
+                      error={Boolean(errors["firstName"])}
+                      helperText={errors["firstName"]?.message}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="middleName"
-                  label="Middle Name"
-                  variant="standard"
-                  onChange={handleInput}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Middle Name"
+                      error={Boolean(errors["middleName"])}
+                      helperText={errors["middleName"]?.message}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="lastName"
-                  label="Last Name"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Last Name"
+                      error={Boolean(errors["lastName"])}
+                      helperText={errors["lastName"]?.message}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="fatherName"
-                  label="Father Name"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Father Name"
+                      error={Boolean(errors["fatherName"])}
+                      helperText={errors["fatherName"]?.message}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="motherName"
-                  label="Mother Name"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Mother Name"
+                      error={Boolean(errors["motherName"])}
+                      helperText={errors["motherName"]?.message}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="phone"
-                  label="Phone"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Phone"
+                      error={Boolean(errors["phone"])}
+                      helperText={errors["phone"]?.message}
+                      inputProps={{ maxLength: 10 }}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="email"
-                  label="Email"
-                  type="email"
-                  variant="standard"
-                  onChange={handleInput}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Email"
+                      error={Boolean(errors["email"])}
+                      helperText={errors["email"]?.message}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item sm={4}>
-                <TextField
+                <Controller
                   name="dateOfBirth"
-                  label="Date Of Birth"
-                  type="date"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ shrink: true, required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Date Of Birth"
+                      type="date"
+                      error={Boolean(errors["dateOfBirth"])}
+                      helperText={errors["dateOfBirth"]?.message}
+                      InputLabelProps={{ shrink: true }}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item sm={4}>
-                <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                  <InputLabel id="select-course">Course</InputLabel>
-                  <Select
-                    labelId="select-course"
-                    name="courseId"
-                    onChange={handleCourseSelect}
-                    label="Course"
-                    value={selectedCourse}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {
-                      courses.map((course) => <MenuItem key={course.id}
-                        value={course}>{course.course}</MenuItem>)
-                    }
-                  </Select>
-                </FormControl>
+                <Controller
+                  name="courseId"
+                  defaultValue=""
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                      <InputLabel id="select-course">Course</InputLabel>
+                      <Select
+                        labelId="select-course"
+                        label="Course"
+                        {...field}
+                        variant="standard"
+
+                        error={Boolean(errors.courseId)}
+                        onChange={(e) => {
+                          const courseId = e.target.value;
+                          const totalFees = courseId ? courses.find(({ id }) => id === courseId).fees : "";
+                          setValue("totalFees", totalFees);
+                          field.onChange(courseId)
+                        }}
+                      >
+                        <MenuItem value="">
+                          <em>None</em>
+                        </MenuItem>
+                        {courses.map((course) => (
+                          <MenuItem key={course.id} value={course.id}>
+                            {course.course}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="totalFees"
-                  label="Total Fees ₹"
-                  type="number"
-                  variant="standard"
-                  readOnly
-                  disabled
-                  value={selectedCourse?.fees || ""}
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      name="totalFees"
+                      label="Total Fees ₹"
+                      type="number"
+                      InputLabelProps={{ shrink: true }}
+                      variant="standard"
+                      readOnly
+                      error={Boolean(errors["totalFees"])}
+                      helperText={errors["totalFees"]?.message}
+                      disabled
+                      h={console.log("Here", field.value)}
+                    />
+                  )}
                 />
+
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="discount"
-                  label="Discount %"
-                  type="number"
-                  variant="standard"
-                  onChange={handleInput}
+                  defaultValue={0}
+                  control={control}
+                  render={({ field }) => (
+
+                    < TextField
+                      {...field}
+                      label="Discount %"
+                      error={Boolean(errors["discount"])}
+                      helperText={errors["discount"]?.message}
+                      InputLabelProps={{ shrink: true }}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={4}>
-                <TextField
+                <Controller
                   name="paidFees"
-                  label="Paid Fees ₹"
-                  type="number"
-                  variant="standard"
-                  onChange={handleInput}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  name="email"
-                  label="Email"
-                  type="email"
-                  variant="standard"
-                  onChange={handleInput}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Paid Fees"
+                      error={Boolean(errors["paidFees"])}
+                      helperText={errors["paidFees"]?.message}
+                      InputLabelProps={{ shrink: true }}
+                      variant="standard"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item sm={6}>
-                <TextField
+                <Controller
                   name="address"
-                  label="Address"
-                  variant="standard"
-                  onChange={handleInput}
-                  InputLabelProps={{ required: true }}
-                  fullWidth
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Address"
+                      error={Boolean(errors["address"])}
+                      helperText={errors["address"]?.message}
+                      InputLabelProps={{ shrink: true }}
+                      variant="standard"
+                      style={{ width: "80%" }}
+                    />
+                  )}
                 />
               </Grid>
               <Grid item sm={12} textAlign="center">
-                <Button variant="contained" type="submit" disabled={percentage < 100}>
+                <Button
+                  variant="contained"
+                  type="submit"
+                // disabled={percentage < 100}
+                >
                   Submit
                 </Button>
               </Grid>
             </Grid>
           </div>
         </Box>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

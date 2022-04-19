@@ -1,4 +1,5 @@
 import { Avatar } from "@mui/material";
+import { getDate } from "../../utils";
 
 const columns = [
   { field: 'id', headerName: 'ID', width: 200 },
@@ -17,7 +18,8 @@ const columns = [
     field: 'email', type: 'string', headerName: 'Email', width: 200,
   },
   {
-    field: 'dateOfBirth', type: 'date', headerName: 'Date Of Birth', width: 200
+    field: 'dateOfBirth', type: 'date', headerName: 'Date Of Birth', width: 200,
+    renderCell: (params) => getDate(params.row.dateOfBirth.toDate())
   },
 ];
 

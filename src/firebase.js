@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getDoc, getDocs, getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -34,4 +34,10 @@ export const getResult = async (query) => {
     result.push({ id: doc.id, ...doc.data() });
   });
   return result;
+}
+
+export const uploadFile = async (file, key) => {
+  const storageRef = ref(storage, file.name.split('.').slice(0, -1).join('.') + key);
+  const snapshotp = await uploadBytes(storageRef, file);
+  return getDownloadURL(snapshotp.ref);
 }
