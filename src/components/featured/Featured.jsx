@@ -7,8 +7,7 @@ import "./featured.scss";
 import { CircularProgressbar } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 
-const Featured = () => {
-  return (
+const Featured = () => (
     <div className="featured">
       <div className="top">
         <h1 className="title">Total Revenue</h1>
@@ -49,6 +48,5 @@ const Featured = () => {
       </div>
     </div>
   );
-};
 
 export default Featured;

@@ -1,112 +1,156 @@
-import "./widget.scss";
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import PeopleIcon from "@mui/icons-material/People";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
-import { useEffect, useState } from "react";
-import { getDoc, getDocs, query, where } from "firebase/firestore";
-import { Collections, KeyboardArrowDown } from "@mui/icons-material";
-import { db } from "../../firebase";
+import { Avatar, Box, Card, CardContent, Grid, Typography } from '@mui/material';
+import { AccountBalanceWallet, KeyboardArrowDown, LibraryBooks, People, Person } from '@mui/icons-material';
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
+import PropTypes from 'prop-types';
 
-const Widget = ({ type }) => {
-  let data;
-
-  const [amount, setAmount] = useState(null);
-  const [diff, setDiff] = useState(null);
-
-
-  switch (type) {
-    case "student":
-      data = {
-        title: "STUDENTS",
-        counter: "100",
-        link: "All Students",
-        isMoney: false,
-        icon: (
-          <PeopleIcon
-            className="icon"
-            style={{
-              color: "crimson",
-              backgroundColor: "rgba(255, 0, 0, 0.2)",
-            }}
-          />
-        ),
-      };
-      break;
-    case "earning":
-      data = {
-        title: "EARNINGS",
-        counter: "15000",
-        link: "View net earning",
-        isMoney: true,
-        icon: (
-          <AccountBalanceWalletIcon
-            className="icon"
-            style={{
-              color: "green",
-              backgroundColor: "rgba(0, 128, 0, 0.2)",
-            }}
-          />
-        ),
-      };
-      break;
-    case "course":
-      data = {
-        title: "COURSES",
-        isMoney: false,
-        counter: "20",
-        link: "All Courses",
-        icon: (
-          <LibraryBooksIcon
-            className="icon"
-            style={{
-              color: "#303f9f",
-              backgroundColor: "RGBA(48,63,159,0.3)",
-            }}
-          />
-        ),
-      };
-      break;
-    default:
-      break;
+export const Widget = ({ type, counter }) => {
+  const data = {
+    student: {
+      title: 'STUDENTS',
+      counter: 100,
+      percent: -10,
+      icon: (
+        <People
+          className="icon"
+          style={{
+            color: 'crimson',
+            height: 30,
+            width: 30,
+          }}
+        />
+      ),
+    },
+    course: {
+      title: 'COURSES',
+      counter: 20,
+      percent: 30,
+      icon: (
+        <LibraryBooks
+          className="icon"
+          style={{
+            color: '#303f9f',
+            height: 30,
+            width: 30,
+          }}
+        />
+      ),
+    },
+    earning: {
+      title: 'EARNINGS',
+      counter: 15000,
+      percent: -20,
+      icon: (
+        <AccountBalanceWallet
+          className="icon"
+          style={{
+            color: 'green',
+            height: 30,
+            width: 30,
+          }}
+        />
+      ),
+    },
+    teacher: {
+      title: 'TEACHERS',
+      counter: 50,
+      percent: 10,
+      icon: (
+        <Person
+          className="icon"
+          style={{
+            color: '#4A0D67',
+            height: 30,
+            width: 30,
+          }}
+        />
+      ),
+    },
+  };
+  if (counter) {
+    data[type].counter = counter;
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const today = new Date();
-      const lastMonth = new Date(new Date().setMonth(today.getMonth() - 1));
-      const prevMonth = new Date(new Date().setMonth(today.getMonth() - 2));
-
-      const lastMonthQuery = query(Collections(db, "students"), where("timeStamp", "<=", today), where("timeStamp", ">", lastMonth));
-      const preMonthQuery = query(Collections(db, "students"), where("timeStamp", "<=", lastMonth), where("timeStamp", ">", prevMonth));
-
-      const lastMonthData = await getDoc(lastMonthQuery);
-      const preMonthData = await getDocs(preMonthQuery);
-
-      setAmount(lastMonthData.docs.length);
-      setDiff((lastMonthData.docs.length - prevMonth.docs.length) / (preMonthData.docs.length) * 100)
-
-    };
-    fetchData();
-  }, [])
   return (
-    <div className="widget">
-      <div className="left">
-        <span className="title">{data.title}</span>
-        <span className="counter">
-          {data.isMoney && "₹"} {amount}
-        </span>
-        <span className="link">{data.link}</span>
-      </div>
-      <div className="right">
-        <div className={`percentage ${diff < 0 ? "negative" : "positive"}`}>
-          {diff < 0 ? <KeyboardArrowDown /> : <KeyboardArrowUpIcon />}
-          {diff}%
-        </div>
-        {data.icon}
-      </div>
-    </div>
+    <Card
+      sx={{
+        width: '100%',
+        padding: '10px',
+        boxShadow: '2px 4px 10px 1px rgba(201, 201, 201, 0.47)',
+      }}
+    >
+      <CardContent>
+        <Grid
+          container
+          spacing={3}
+          sx={{
+            justifyContent: 'space-between',
+          }}
+        >
+          <Grid item>
+            <Typography color="textSecondary" gutterBottom variant="overline">
+              {data[type].title}
+            </Typography>
+            <Typography color="textPrimary" variant="h4">
+              {data[type].counter}
+            </Typography>
+          </Grid>
+          <Grid item>
+            <Avatar
+              sx={{
+                backgroundColor: '#f8f9fa',
+                height: 70,
+                width: 70,
+              }}
+            >
+              {data[type].icon}
+            </Avatar>
+          </Grid>
+        </Grid>
+        <Box
+          sx={{
+            pt: 3,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {data[type].percent < 0 ? (
+            <>
+              <KeyboardArrowDown color="error" />
+              <Typography
+                color="error"
+                sx={{
+                  mr: 1,
+                }}
+                variant="body2"
+              >
+                {data[type].percent}%
+              </Typography>
+            </>
+          ) : (
+            <>
+              <KeyboardArrowUp color="success" />
+              <Typography
+                color="success.main"
+                sx={{
+                  mr: 1,
+                }}
+                variant="body2"
+              >
+                {data[type].percent}%
+              </Typography>
+            </>
+          )}
+
+          <Typography color="textSecondary" variant="caption">
+            Since last month
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 
-export default Widget;
+Widget.propTypes = {
+  type: PropTypes.string,
+  counter: PropTypes.number,
+};

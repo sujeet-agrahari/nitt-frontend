@@ -1,46 +1,173 @@
-import Datatable from "../../components/datatable/Datatable";
-import Navbar from "../../components/navbar/Navbar";
-import Sidebar from "../../components/sidebar/Sidebar";
-import "./course.scss";
-import courseColumns from "./course-columns";
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { Box, Stack, Switch, Tooltip, IconButton } from '@mui/material';
+import PageTitle from 'src/components/page-title/PageTitle';
+import { useConfirm } from 'material-ui-confirm';
+import { useState } from 'react';
+import { Add, Visibility } from '@mui/icons-material';
+import { useAlert } from 'react-alert';
+import MuiDataTable from 'mui-datatables';
+import { GridActionsCellItem } from '@mui/x-data-grid';
+import Layout from '../../components/layout/Layout';
+
+import axiosHook from '../../api/axios-hook';
+
+import ApiConfig from '../../api/api-config';
+import AddCourse from './AddCourse';
+import UpdateCourse from './UpdateCourse';
 
 const Course = () => {
-  const [data, setData] = useState([]);
-  const entity = "courses";
+  const alert = useAlert();
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    // LISTEN(REALTIME)
-    const unsub = onSnapshot(collection(db, entity), (snapshot) => {
-      const list = [];
-      snapshot.docs.forEach((doc) => list.push({ id: doc.id, ...doc.data() }))
-      setData(list)
-    }, (error) => {
-      console.log(error)
-    });
-    return () => unsub();
-  }, []);
+  const [{ data: courses = [] }, refetchCourse] = axiosHook(ApiConfig.COURSE.GET_COURSES.url);
+  const [, executeUpdate] = axiosHook(
+    {
+      ...ApiConfig.COURSE.UPDATE_COURSE,
+    },
+    { manual: true }
+  );
 
-  const handleDelete = async (id) => {
-    await deleteDoc(doc(db, entity, id));
-    setData(data.filter(item => item.id !== id))
-  }
+  const [updateCourseDialogOpen, setUpdateCourseDialogOpen] = useState(false);
+  const [courseRow, setCourseRow] = useState({});
+  const [addCourseDialogOpen, setAddCourseDialogOpen] = useState(false);
 
+  const handleActive = (course) => {
+    const courseStatus = course.isActive;
+    confirm({
+      description: `Do you want to ${courseStatus ? 'deactivate' : 'activate'} course?`,
+      confirmationText: 'Yes',
+      title: `${courseStatus ? 'Deactivate' : 'Activate'} Course!`,
+    })
+      .then(async () => {
+        try {
+          await executeUpdate({
+            url: `${ApiConfig.COURSE.UPDATE_COURSE.url}/${course.id}`,
+            data: {
+              isActive: !course.isActive,
+            },
+          });
+          await refetchCourse();
+        } catch (error) {
+          alert.show(error.response.data.message);
+        }
+      })
+      .catch((err) => err?.message ?? alert.error(err?.message));
+  };
 
-  return <div className="course">
-    <Sidebar />
-    <div className="courseContainer">
-      <Navbar />
-      <Datatable
-        entity={entity}
-        columns={courseColumns}
-        rows={data}
-        deleteRow={handleDelete}
-      />
-    </div>
-  </div>;
+  const columns = [
+    {
+      name: 'id',
+      label: 'ID',
+      options: {
+        display: false,
+        filter: true,
+        sort: true,
+      },
+    },
+    {
+      name: 'name',
+      label: 'Course',
+      options: {
+        filter: true,
+        sort: true,
+      },
+    },
+
+    {
+      name: 'duration',
+      label: 'Duration',
+      options: {
+        filter: false,
+        sort: false,
+      },
+    },
+    {
+      name: 'description',
+      label: 'Description',
+      options: {
+        filter: true,
+        sort: true,
+      },
+    },
+    {
+      name: 'price',
+      label: 'Fees',
+      options: {
+        filter: false,
+        sort: true,
+      },
+    },
+    {
+      name: 'discount',
+      label: 'Discount',
+      options: {
+        filter: true,
+        sort: false,
+      },
+    },
+    {
+      name: 'Actions',
+      options: {
+        filter: true,
+        setCellHeaderProps: () => ({ align: 'left' }),
+        sort: false,
+        empty: true,
+        onRowClick: false,
+        customBodyRender: (value, tableMeta) => {
+          const course = courses.find((course) => course.id === tableMeta.rowData[0]);
+          return (
+            <Stack flexDirection={'row'} gap={2}>
+              <GridActionsCellItem
+                icon={<Visibility color="primary" />}
+                onClick={() => {
+                  setCourseRow(course);
+                  setUpdateCourseDialogOpen(true);
+                }}
+                label="View"
+              />
+              <GridActionsCellItem
+                icon={<Switch checked={course.isActive} />}
+                onClick={() => {
+                  handleActive(course);
+                }}
+                label="Active"
+              />
+            </Stack>
+          );
+        },
+      },
+    },
+  ];
+
+  return (
+    <Layout>
+      <Box padding={2} width="100%">
+        <PageTitle pageTitle="Courses" />
+        <UpdateCourse
+          open={updateCourseDialogOpen}
+          setOpen={setUpdateCourseDialogOpen}
+          refetchCourse={refetchCourse}
+          course={courseRow}
+          setCourse={setCourseRow}
+        />
+        <AddCourse open={addCourseDialogOpen} setOpen={setAddCourseDialogOpen} refetchCourse={refetchCourse} />
+        <MuiDataTable
+          data={courses}
+          columns={columns}
+          options={{
+            filterType: 'checkbox',
+            selectableRows: 'none',
+            customToolbar: () => (
+              <Tooltip title={'Collect Fees'}>
+                <IconButton onClick={() => setAddCourseDialogOpen(true)}>
+                  <Add />
+                </IconButton>
+              </Tooltip>
+            ),
+          }}
+        />
+      </Box>
+    </Layout>
+  );
 };
 
 export default Course;

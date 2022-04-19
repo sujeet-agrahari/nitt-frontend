@@ -6,11 +6,10 @@ import Chart from "../../components/chart/Chart";
 
 import Table from "../../components/table/Table"
 
-const Single = () => {
-  return <div className="single">
-    <Sidebar></Sidebar>
+const Single = () => <div className="single">
+    <Sidebar />
     <div className="singleContainer">
-      <Navbar></Navbar>
+      <Navbar />
       <div className="top">
         <div className="left">
           <div className="editButton">Edit</div>
@@ -20,7 +19,7 @@ const Single = () => {
               width: "200px",
               height: "200px",
               marginTop: "4 0px"
-            }}></Avatar>
+            }} />
             <div className="details">
               <h1 className="itemTitle">Jane Doe</h1>
               <div className="detailItem">
@@ -64,6 +63,5 @@ const Single = () => {
       </div>
     </div>
   </div>;
-};
 
 export default Single;

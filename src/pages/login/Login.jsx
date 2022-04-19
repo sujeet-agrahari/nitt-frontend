@@ -1,47 +1,115 @@
-import { useContext, useState } from "react";
-import "./login.scss";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+import { useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import * as yup from 'yup';
+import { useAlert } from 'react-alert';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { Grid, Button, Stack, Typography, Avatar, Container } from '@mui/material';
+import ControlledTextInput from 'src/components/mui-react-hook-form/ControlledTextInput';
+import { Box } from '@mui/system';
+import { LockOutlined } from '@mui/icons-material';
+import ApiConfig from '../../api/api-config';
+import { AuthContext } from '../../context/AuthContext';
+import axiosHook from '../../api/axios-hook';
+
+function Copyright(props) {
+  return (
+    <Typography variant="body2" color="text.secondary" align="center" {...props}>
+      {'Copyright © '}
+      <Link color="inherit" to="https://nitti.in/">
+        NITTI
+      </Link>{' '}
+      {new Date().getFullYear()}
+      {'.'}
+    </Typography>
+  );
+}
+const schema = yup.object({
+  phone: yup
+    .string()
+    .matches(/^[6-9]{1}[0-9]{9}$/, 'Invalid phone number!')
+    .required('Field is required!'),
+  password: yup.string().min(8).max(20).required(),
+});
 
 const Login = () => {
-  const [loginError, setLoginError] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const alert = useAlert();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: 'all',
+  });
 
   const navigate = useNavigate();
-
   const { dispatch } = useContext(AuthContext);
+  const [, doLogin] = axiosHook(
+    {
+      ...ApiConfig.AUTH.LOGIN,
+    },
+    { manual: true }
+  );
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in 
-        const user = userCredential.user;
-        dispatch({ type: 'LOGIN', payload: user })
-        navigate("/")
-      })
-      .catch((error) => {
-        // const errorCode = error.code;
-        const errorMessage = error.message;
-        console.log(error)
-        setLoginError(errorMessage);
-      });
-  }
-  return <div className="login">
-    <div className="logo">
-      <h1>NITTI</h1>
-      <h3>National Information Technology Training Institute</h3>
-    </div>
-    <form onSubmit={handleLogin}>
-      <input type="email" placeholder="email" onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" placeholder="password" onChange={(e) => setPassword(e.target.value)} />
-      <button type="submit">Submit</button>
-      {loginError && <span>{loginError}</span>}
-    </form>
-  </div>;
+  const handleLogin = () => {
+    handleSubmit(async (data) => {
+      try {
+        const response = await doLogin({
+          data,
+        });
+        dispatch({ type: 'LOGIN', payload: response.data });
+        navigate('/');
+        alert.success('Logged in!');
+      } catch (error) {
+        console.log(error);
+        alert.error(error.response.data.message);
+      }
+    })();
+  };
+
+  return (
+    <Container component="main" maxWidth="xs">
+      {/* <CssBaseline /> */}
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+          <LockOutlined />
+        </Avatar>
+        <Typography component="h1" variant="h5">
+          Sign in
+        </Typography>
+        <Box component="form" noValidate sx={{ mt: 1 }} onSubmit={handleSubmit(handleLogin)}>
+          <ControlledTextInput name={'phone'} control={control} label="Phone" variant="outlined" margin="normal" />
+          <ControlledTextInput
+            name={'password'}
+            control={control}
+            label="Password"
+            variant="outlined"
+            margin="normal"
+            type="password"
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={Boolean(Object.keys(errors).length)}
+          >
+            Sign In
+          </Button>
+        </Box>
+      </Box>
+      <Copyright sx={{ mt: 8, mb: 4 }} />
+    </Container>
+  );
 };
 
 export default Login;
