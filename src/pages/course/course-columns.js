@@ -1,12 +1,34 @@
 const columns = [
-  { field: 'id', headerName: 'ID', width: 200 },
-  { field: 'course', headerName: 'Course', width: 100 },
+  { field: 'id', headerName: 'ID', flex: 3 },
+  { field: 'name', headerName: 'Course', flex: 1 },
   {
-    field: 'fees', type: 'number', headerName: 'Fees', width: 100,
-    renderCell: (params) => `₹${params.row.fees}`
+    field: 'fees',
+    type: 'number',
+    headerName: 'Fees',
+    flex: 1,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params) => `₹${params.row.price}`,
   },
-  { field: 'duration', type: 'number', headerName: 'Duration (Days)', width: 130 },
-  { field: 'fullForm', headerName: 'Full Form', width: 300 },
+  {
+    field: 'discount',
+    type: 'number',
+    headerName: 'Discount',
+    align: 'left',
+    headerAlign: 'left',
+    flex: 1,
+    renderCell: (params) => `${params.row.discount}%`,
+  },
+  {
+    field: 'duration',
+    type: 'number',
+    headerName: 'Duration',
+    flex: 1,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params) => `${params.row.duration} Days`,
+  },
+  { field: 'description', headerName: 'Description', minWidth: 300, flex: 2 },
 ];
 
 export default columns;

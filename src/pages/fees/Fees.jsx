@@ -5,48 +5,65 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
 import { Avatar } from '@mui/material';
-import { collection, doc, getDoc, query, where } from 'firebase/firestore';
-import { db, getResult } from '../../firebase';
+import { Box } from '@mui/system';
+import { getDocuments } from '../../firebase';
 import Sidebar from '../../components/sidebar/Sidebar';
 import Navbar from '../../components/navbar/Navbar';
-import { getDate } from "../../utils";
+import { getDate } from '../../utils';
 
-import "./fees.scss";
-import { Box } from '@mui/system';
-
+import './fees.scss';
+import AddFees from './AddFees';
 
 export default function Fees() {
   const [feesDetail, setFeesDetail] = React.useState([]);
 
   React.useEffect(() => {
     const fetchFees = async () => {
-      const enrollments = await getResult(query(collection(db, "enrollments")));
+      const enrollments = await getDocuments({
+        collectionName: 'enrollments',
+      });
       for (const enrollment of enrollments) {
-        enrollment.student = (await getDoc(doc(db, "students", enrollment.studentId))).data();
-        enrollment.course = (await getDoc(doc(db, "courses", enrollment.courseId))).data();
-        enrollment.fees = (await getResult(query(collection(db, "fees"), where("enrollmentId", "==", enrollment.id))))[0];
+        enrollment.student = await getDocuments({
+          collectionName: 'students',
+          fetchSingle: true,
+          whereConditions: {
+            id: enrollment.studentId,
+          },
+        });
+        enrollment.course = await getDocuments({
+          collectionName: 'courses',
+          fetchSingle: true,
+          whereConditions: {
+            id: enrollment.courseId,
+          },
+        });
+        enrollment.fees = await getDocuments({
+          collectionName: 'fees',
+          whereConditions: {
+            enrollmentId: enrollment.id,
+          },
+        });
       }
-      console.log(enrollments);
-
       setFeesDetail(enrollments);
-    }
+      console.log('Enrollments', enrollments);
+    };
     fetchFees();
   }, []);
 
+  const rows = feesDetail.flatMap((enrollment) => {
+    console.log('🚀 ~ file: Fees.jsx ~ line 57 ~ rows ~ enrollment', enrollment);
 
-  const rows = feesDetail.map((enrollment) => ({
-    photo: enrollment.student?.photo,
-    fullName: enrollment.student?.firstName,
-    totalFees: enrollment.totalFees,
-    paidFees: enrollment.fees?.paidFees,
-    course: enrollment.course?.course,
-    feePaidDate: getDate(enrollment.fees?.createdAt?.toDate()),
-    medium: "Cash"
-  }))
-
-  console.log(rows);
+    return enrollment.fees.map((fees) => ({
+      photo: enrollment.student.photo,
+      fullName: `${enrollment.student.firstName} ${enrollment.student?.middleName} ${enrollment.student.lastName}`,
+      totalFees: enrollment.totalFees,
+      paidFees: fees.paidFees,
+      course: enrollment.course?.course,
+      feePaidDate: getDate(fees.createdAt.toDate()),
+    }));
+  });
+  console.log('🚀 ~ file: Fees.jsx ~ line 66 ~ rows ~ rows', rows);
 
   return (
     <div className="fees">
@@ -69,27 +86,41 @@ export default function Fees() {
               </TableHead>
               <TableBody sx={{ fontWeight: '200' }}>
                 {rows.map((row, index) => (
-                  <TableRow
-                    key={index}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                  >
+                  <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                     <TableCell align="right" component="th" scope="row">
                       {index + 1}
                     </TableCell>
-                    <TableCell align="right"><Avatar src={row.photo} sx={{ height: '80px', width: '80px', display: 'inline-block' }} /></TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 200 }}>{row.fullName}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 200 }}>{row.course}</TableCell>
-                    <TableCell align="right" >{row.totalFees}</TableCell>
-                    <TableCell align="right" sx={{ color: 'green' }}>{row.paidFees}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 200 }}>{row.feePaidDate}</TableCell>
+                    <TableCell align="right">
+                      <Avatar
+                        src={row.photo}
+                        sx={{
+                          height: '80px',
+                          width: '80px',
+                          display: 'inline-block',
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 200 }}>
+                      {row.fullName}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 200 }}>
+                      {row.course}
+                    </TableCell>
+                    <TableCell align="right">{row.totalFees}</TableCell>
+                    <TableCell align="right" sx={{ color: 'green' }}>
+                      {row.paidFees}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 200 }}>
+                      {row.feePaidDate}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
         </Box>
+        <AddFees />
       </div>
     </div>
-
   );
 }

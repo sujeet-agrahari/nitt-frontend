@@ -17,8 +17,7 @@ const data = [
   { name: "July", total: 20000 },
 ];
 
-const Chart = ({ aspect, title }) => {
-  return (
+const Chart = ({ aspect, title }) => (
     <div className="chart">
       <div className="title">{title}</div>
       <ResponsiveContainer width="100%" aspect={aspect}>
@@ -48,6 +47,5 @@ const Chart = ({ aspect, title }) => {
       </ResponsiveContainer>
     </div>
   );
-};
 
 export default Chart;

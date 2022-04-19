@@ -1,81 +1,151 @@
-import Navbar from "../../components/navbar/Navbar";
-import Sidebar from "../../components/sidebar/Sidebar";
-import "./add-new-course.scss";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../../firebase";
+import * as yup from 'yup';
 
-import { useNavigate } from "react-router-dom";
-import { TextField, Button, Grid, Typography } from "@mui/material";
-import { Box } from "@mui/system";
-import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
+import { Button, Grid, InputAdornment } from '@mui/material';
+import { useForm } from 'react-hook-form';
+import { Box } from '@mui/system';
+import Layout from 'src/components/layout/Layout';
+import PageTitle from 'src/components/page-title/PageTitle';
+import { useAxios } from 'src/api/use-axios';
+import ApiConfig from 'src/api/api-config';
+import ControlledTextInput from 'src/components/mui-react-hook-form/ControlledTextInput';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useEffect } from 'react';
+import { CurrencyRupee, Percent } from '@mui/icons-material';
 
-const New = ({ inputs, title }) => {
-  const [data, setData] = useState({});
+const COURSE_ADD_CONFIG = ApiConfig.COURSE.ADD_COURSE;
+
+const schema = yup.object({
+  name: yup.string().required('Field is required!'),
+  description: yup.string().required('Field is required!'),
+  price: yup.number().positive().integer().required('Field is required'),
+  duration: yup.number().positive().integer().required('Field is required'),
+  discount: yup.number().positive().integer().default(0),
+});
+
+const New = () => {
   const navigate = useNavigate();
+  const { control, handleSubmit } = useForm({
+    resolver: yupResolver(schema),
+    mode: 'all',
+  });
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    try {
-      // Add a new document in collection "students"
-      await addDoc(collection(db, "courses"), {
-        ...data,
-        timeStamp: serverTimestamp()
-      });
-      navigate(-1);
-    } catch (error) {
+  const { fetch, response, error } = useAxios(COURSE_ADD_CONFIG, false);
+
+  useEffect(() => {
+    if (error) {
       console.log(error);
     }
-  }
+    if (response) {
+      navigate(-1);
+    }
+  });
 
-  const handleInput = (e) => {
-    const id = e.target.id;
-    const value = e.target.value;
-    setData({ ...data, [id]: value });
+  const handleAdd = async (data) => {
+    COURSE_ADD_CONFIG.data = data;
+    fetch();
   };
 
-  return <div className="new">
-    <Sidebar></Sidebar>
-    <div className="newContainer">
-      <Navbar></Navbar>
-      <div className="top">
-        <Typography variant="h5" component="div" color="gray">Add New Course</Typography>
-      </div>
-      <Box
-        component="form"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          flexDirection: "column"
-        }}
-        noValidate
-        autoComplete="off"
-        onSubmit={handleAdd}
+  return (
+    <Layout>
+      <Grid
+        container
+        spacing={0}
+        direction="column"
+        alignItems="center"
+        style={{ minHeight: '100vh', padding: '50px' }}
       >
-        <div className="formInput">
-          <Grid container spacing={4} >
-            <Grid item xs={4}>
-              <TextField id="course" label="Course" variant="standard" required onChange={handleInput} />
+        <Grid item xs={3}>
+          <PageTitle pageTitle="Add New Course" />
+          <Box
+            component="form"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              flexDirection: 'column',
+              boxShadow: '2px 4px 10px 1px rgba(201, 201, 201, 0.47)',
+              borderRadius: '10px',
+              padding: '20px',
+            }}
+            noValidate
+            autoComplete="off"
+            onSubmit={handleSubmit(handleAdd)}
+          >
+            <Grid container spacing={4}>
+              <Grid item xs={3}>
+                <ControlledTextInput name={'name'} control={control} label="Course Name" />
+              </Grid>
+              <Grid item xs={6}>
+                <ControlledTextInput
+                  name={'description'}
+                  control={control}
+                  label="Description"
+                  style={{
+                    width: '80%',
+                  }}
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <ControlledTextInput
+                  name={'price'}
+                  control={control}
+                  label="Price"
+                  type="number"
+                  style={{
+                    width: '45%',
+                  }}
+                  inputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <CurrencyRupee />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <ControlledTextInput
+                  name={'discount'}
+                  control={control}
+                  label="Discount"
+                  type="number"
+                  style={{
+                    width: '45%',
+                  }}
+                  inputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Percent />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <ControlledTextInput
+                  name={'duration'}
+                  control={control}
+                  label="Duration"
+                  type="number"
+                  style={{
+                    width: '45%',
+                  }}
+                  inputProps={{
+                    endAdornment: <InputAdornment position="end">Days</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item sm={12} textAlign="center">
+                <Button variant="contained" type="submit">
+                  Add Course
+                </Button>
+              </Grid>
             </Grid>
-            <Grid item xs={8}>
-              <TextField id="fullForm" label="Full Form" variant="standard" sx={{
-                width: "70%"
-              }} onChange={handleInput} />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField id="duration" label="Duration(days)" variant="standard" type="number" required onChange={handleInput} />
-            </Grid>
-
-            <Grid item xs={4}>
-              <TextField id="fees" label="Fees ₹" type="number" variant="standard" onChange={handleInput} />
-            </Grid>
-            <Grid item sm={12} textAlign="center">
-              <Button variant="contained" type="submit">Submit</Button>
-            </Grid>
-          </Grid>
-        </div>
-      </Box>
-    </div>
-  </div>;
+          </Box>
+        </Grid>
+      </Grid>
+    </Layout>
+  );
 };
 
 export default New;
