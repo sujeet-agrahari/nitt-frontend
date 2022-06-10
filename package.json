@@ -15,6 +15,7 @@
     "@testing-library/react": "^12.1.4",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^0.27.2",
+<<<<<<< HEAD
     "axios-hooks": "^3.0.4",
     "dayjs": "^1.11.1",
     "firebase": "^9.6.10",
@@ -23,6 +24,13 @@
     "material-ui-confirm": "^3.0.4",
     "moment": "^2.29.3",
     "mui-datatables": "^4.2.2",
+=======
+    "dayjs": "^1.11.1",
+    "firebase": "^9.6.10",
+    "lodash": "^4.17.21",
+    "material-ui-confirm": "^3.0.4",
+    "moment": "^2.29.3",
+>>>>>>> master
     "prop-types": "^15.8.1",
     "react": "^18.0.0",
     "react-alert": "^7.0.3",

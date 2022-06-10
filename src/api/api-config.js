@@ -3,7 +3,11 @@ const ApiConfig = {
     GET_COURSES: {
       url: '/courses',
     },
+<<<<<<< HEAD
     POST_COURSE: {
+=======
+    ADD_COURSE: {
+>>>>>>> master
       url: '/courses',
       method: 'POST',
     },
@@ -19,10 +23,13 @@ const ApiConfig = {
     GET_TOTAL: {
       url: '/fees/total',
     },
+<<<<<<< HEAD
     POST_FEES: {
       url: '/fees',
       method: 'POST',
     },
+=======
+>>>>>>> master
   },
   STUDENT: {
     GET_STUDENTS: {
@@ -33,6 +40,7 @@ const ApiConfig = {
     GET_ENROLLMENTS: {
       url: '/enrollments',
     },
+<<<<<<< HEAD
     POST_ENROLLMENT: {
       url: '/enrollments',
       method: 'POST',
@@ -41,6 +49,8 @@ const ApiConfig = {
       url: '/enrollments',
       method: 'PUT',
     },
+=======
+>>>>>>> master
   },
   AUTH: {
     LOGIN: {
