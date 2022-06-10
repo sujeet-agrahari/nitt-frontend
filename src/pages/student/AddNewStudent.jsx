@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react';
-import { addDoc, collection, onSnapshot } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-
 import {
   Button,
   Avatar,
@@ -13,18 +10,22 @@ import {
   Typography,
   Stack,
   InputAdornment,
+  CircularProgress,
+  Backdrop,
 } from '@mui/material';
 import { Box, styled } from '@mui/system';
-
-import { pick } from 'lodash';
-
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import Layout from 'src/components/layout/Layout';
 import PageTitle from 'src/components/page-title/PageTitle';
 import { CurrencyRupee, Percent } from '@mui/icons-material';
-import { db, uploadFile } from '../../firebase';
+import axiosHook from 'src/api/axios-hook';
+import ApiConfig from 'src/api/api-config';
+import { useAlert } from 'react-alert';
+import { uploadFile } from 'src/firebase';
+import { useConfirm } from 'material-ui-confirm';
+import { useState } from 'react';
 import ControlledTextInput from '../../components/mui-react-hook-form/ControlledTextInput';
 import ControlledDatePicker from '../../components/mui-react-hook-form/ControlledDatePicker';
 
@@ -33,33 +34,51 @@ const Input = styled('input')({
 });
 const schema = yup
   .object({
-    firstName: yup.string().required('Field is required!'),
-    middleName: yup.string().required('Field is required!'),
-    lastName: yup.string().required('Field is required!'),
-    fatherName: yup.string().required('Field is required!'),
-    motherName: yup.string().required('Field is required!'),
-    paidFees: yup.number().positive().integer().required('Field is required!'),
     phone: yup
       .string()
       .matches(/^[6-9]{1}[0-9]{9}$/, 'Invalid phone number!')
       .required('Field is required!'),
+
+    firstName: yup.string().required('Field is required!'),
+    middleName: yup.string(),
+    lastName: yup.string().required('Field is required!'),
+    fatherName: yup.string().required('Field is required!'),
+    motherName: yup.string().required('Field is required!'),
+    addressLine1: yup.string().required('Field is required'),
+    addressLine2: yup.string(),
     dateOfBirth: yup.date().typeError('Invalid date').required('Field is required'),
-    address: yup.string().required('Field is required'),
-    discount: yup.number().typeError('Must be a number').integer().min(0),
-    photo: yup.mixed().test('photo', 'Photo is required!', (value) => value && value.length > 0),
-    courseId: yup.string().required('Select course'),
     email: yup.string().email('Invalid email!').nullable().default(null),
+    photo: yup.mixed().test('photo', 'Photo is required!', (value) => value && value.length > 0),
+
+    discount: yup.number().typeError('Must be a number').integer().min(0).default(0),
+    courseId: yup.string().required('Select course'),
     totalFees: yup
       .number()
       .typeError('Total fees required, select course!')
       .positive('Total fees required, select course!')
       .required('Total fees required, select course!'),
+    enrolledOn: yup.date().typeError('Invalid date').default(new Date()),
+
+    paidFees: yup.number().positive().integer().required('Field is required!'),
+    paidOn: yup.date().typeError('Invalid date').required('Field is required').default(new Date()),
+    medium: yup.string().default('Cash'),
+    receiptNo: yup.string().default(),
   })
   .required();
 
 const AddNewStudent = () => {
-  const [courses, setCourses] = useState([]);
+  const alert = useAlert();
 
+  const confirm = useConfirm();
+  const [isLoading, setLoading] = useState(false);
+
+  const [{ data: courses = [] }] = axiosHook(ApiConfig.COURSE.GET_COURSES.url);
+  const [, createEnrollment] = axiosHook(
+    { ...ApiConfig.ENROLLMENT.POST_ENROLLMENT },
+    {
+      manual: true,
+    }
+  );
   const {
     control,
     formState: { errors },
@@ -69,66 +88,36 @@ const AddNewStudent = () => {
     resolver: yupResolver(schema),
     mode: 'all',
   });
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, 'courses'),
-      (snapshot) => {
-        const list = [];
-        snapshot.docs.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
-        setCourses(list);
-      },
-      (error) => {
-        console.log(error);
-      }
-    );
-    return () => unsub();
-  }, []);
 
   const navigate = useNavigate();
 
   const handleAdd = async (data) => {
+    setLoading(true);
     try {
-      // upload the file
       data.photo = await uploadFile(data.photo[0], data.phone);
-      const student = await addDoc(collection(db, 'students'), {
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        ...pick(data, [
-          'email',
-          'photo',
-          'phone',
-          'address',
-          'lastName',
-          'firstName',
-          'fatherName',
-          'middleName',
-          'motherName',
-          'dateOfBirth',
-        ]),
+      const response = await createEnrollment({
+        data,
       });
-      const enrollment = await addDoc(collection(db, 'enrollments'), {
-        studentId: student.id,
-        ...pick(data, ['courseId']),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        totalFees: data.totalFees,
-      });
-      await addDoc(collection(db, 'fees'), {
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        ...pick(data, ['paidFees']),
-        enrollmentId: enrollment.id,
-      });
-      navigate(-1);
+      setLoading(false);
+      confirm({
+        description: `Password is ${response.data.user.password}`,
+        title: 'Student Created!',
+        confirmationText: 'Okay',
+      })
+        .then(() => navigate(-1))
+        .catch((err) => alert.show(err?.message));
     } catch (error) {
-      console.log(error);
+      setLoading(false);
+      alert.error(error.response.data.message);
     }
   };
-
   return (
     <Layout>
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={isLoading}>
+        <CircularProgress color="secondary" size={70} />
+      </Backdrop>
       <Box padding={2}>
-        <PageTitle pageTitle="Add New Student" margin={4} />
+        <PageTitle pageTitle="Add New Student" margin={3} />
         <Box
           component="form"
           sx={{
@@ -178,23 +167,8 @@ const AddNewStudent = () => {
               </Stack>
             )}
           />
-          <Grid container spacing={4} textAlign="center">
-            <Grid item xs={4}>
-              <ControlledTextInput name={'firstName'} control={control} label="First Name" />
-            </Grid>
-            <Grid item xs={4}>
-              <ControlledTextInput name={'middleName'} control={control} label="Middle Name" />
-            </Grid>
-            <Grid item xs={4}>
-              <ControlledTextInput name={'lastName'} control={control} label="Last Name" />
-            </Grid>
-            <Grid item xs={4}>
-              <ControlledTextInput name={'fatherName'} control={control} label="Father Name" />
-            </Grid>
-            <Grid item xs={4}>
-              <ControlledTextInput name={'motherName'} control={control} label="Mother Name" />
-            </Grid>
-            <Grid item xs={4}>
+          <Grid container spacing={6} textAlign="center">
+            <Grid item xs={3}>
               <ControlledTextInput
                 name={'phone'}
                 control={control}
@@ -204,19 +178,44 @@ const AddNewStudent = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
+              <ControlledTextInput name={'firstName'} control={control} label="First Name" />
+            </Grid>
+            <Grid item xs={3}>
+              <ControlledTextInput name={'middleName'} control={control} label="Middle Name" />
+            </Grid>
+            <Grid item xs={3}>
+              <ControlledTextInput name={'lastName'} control={control} label="Last Name" />
+            </Grid>
+            <Grid item xs={3}>
+              <ControlledTextInput name={'fatherName'} control={control} label="Father Name" />
+            </Grid>
+            <Grid item xs={3}>
+              <ControlledTextInput name={'motherName'} control={control} label="Mother Name" />
+            </Grid>
+            <Grid item xs={3}>
               <ControlledTextInput name={'email'} control={control} label="Email" type="email" />
             </Grid>
-            <Grid item sm={4}>
+            <Grid item sm={3}>
               <ControlledDatePicker name={'dateOfBirth'} label="Date Of Birth" disableFuture control={control} />
             </Grid>
-            <Grid item sm={4}>
+            <Grid item sm={3}>
+              <ControlledDatePicker name={'enrolledOn'} label="Enrolled On" disableFuture control={control} />
+            </Grid>
+            <Grid item sm={3}>
+              <ControlledTextInput name={'addressLine1'} control={control} label="Address Line One" />
+            </Grid>
+            <Grid item sm={3}>
+              <ControlledTextInput name={'addressLine2'} control={control} label="Address Line Two" />
+            </Grid>
+
+            <Grid item sm={3}>
               <Controller
                 name="courseId"
                 defaultValue=""
                 control={control}
                 render={({ field }) => (
-                  <FormControl variant="standard" sx={{ m: 1, width: '45%' }}>
+                  <FormControl variant="standard" sx={{ m: 1, width: '100%' }}>
                     <InputLabel id="select-course">Course</InputLabel>
                     <Select
                       labelId="select-course"
@@ -226,7 +225,8 @@ const AddNewStudent = () => {
                       error={Boolean(errors.courseId)}
                       onChange={(e) => {
                         const courseId = e.target.value;
-                        const totalFees = courseId ? courses.find(({ id }) => id === courseId).fees : '';
+                        const totalFees = courseId ? courses.find(({ id }) => id === courseId).price : '';
+                        console.log(totalFees);
                         setValue('totalFees', totalFees);
                         field.onChange(courseId);
                       }}
@@ -236,7 +236,7 @@ const AddNewStudent = () => {
                       </MenuItem>
                       {courses.map((course) => (
                         <MenuItem key={course.id} value={course.id}>
-                          {course.course}
+                          {course.name}
                         </MenuItem>
                       ))}
                     </Select>
@@ -244,7 +244,7 @@ const AddNewStudent = () => {
                 )}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <ControlledTextInput
                 name={'totalFees'}
                 defaultValue=""
@@ -262,7 +262,7 @@ const AddNewStudent = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <ControlledTextInput
                 name={'discount'}
                 control={control}
@@ -277,27 +277,27 @@ const AddNewStudent = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <ControlledTextInput name={'paidFees'} control={control} label="Paid Fees" type="number" />
             </Grid>
-            <Grid item sm={6}>
-              <ControlledTextInput
-                name={'address'}
-                control={control}
-                label="Address"
-                inputLabelProps={{ shrink: true }}
-                style={{ width: '63%' }}
-              />
+            <Grid item sm={3}>
+              <ControlledDatePicker name={'paidOn'} label="Paid On" disableFuture control={control} />
             </Grid>
-            <Grid item sm={12} textAlign="center">
-              <Button
-                variant="contained"
-                type="submit"
-                // disabled={percentage < 100}
-              >
-                Submit
-              </Button>
+            <Grid item sm={3}>
+              <ControlledTextInput name={'medium'} control={control} label="Payment Medium" defaultValue={'Cash'} />
             </Grid>
+            <Grid item sm={3}>
+              <ControlledTextInput name={'receiptNo'} control={control} label="Receipt No" />
+            </Grid>
+          </Grid>
+          <Grid item sm={12} textAlign="center" marginTop={2}>
+            <Button
+              variant="contained"
+              type="submit"
+              // disabled={percentage < 100}
+            >
+              Submit
+            </Button>
           </Grid>
         </Box>
       </Box>

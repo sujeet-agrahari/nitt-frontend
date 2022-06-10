@@ -1,7 +1,9 @@
 /* eslint-disable no-unused-vars */
 import { Mail, Notifications, Pets } from '@mui/icons-material';
 import { AppBar, Avatar, Badge, Box, InputBase, Menu, MenuItem, styled, Toolbar, Typography } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from 'src/context/AuthContext';
 
 const Offset = styled('div')(({ theme }) => theme.mixins.toolbar);
 
@@ -37,6 +39,12 @@ const UserBox = styled(Box)(({ theme }) => ({
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const { dispatch: authDispatch, currentUser } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    authDispatch({ type: 'LOGOUT' });
+    navigate('/login');
+  };
 
   return (
     <AppBar position="sticky" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
@@ -71,7 +79,7 @@ const Navbar = () => {
             <Notifications />
           </Badge>
           <Avatar
-            src="https://i.pravatar.cc"
+            src={currentUser.Student.photo}
             onClick={(e) => setOpen(true)}
             sx={{
               width: 30,
@@ -79,15 +87,15 @@ const Navbar = () => {
             }}
           />
         </Icons>
-        <UserBox onClick={(e) => setOpen(true)}>
+        <UserBox onClick={() => setOpen(true)}>
           <Avatar
-            src="https://i.pravatar.cc"
+            src={currentUser.Student.photo}
             sx={{
               width: 30,
               height: 30,
             }}
           />
-          <Typography variant="span">John</Typography>
+          <Typography variant="span">{currentUser.Student.firstName}</Typography>
         </UserBox>
       </StyledToolbar>
       <Menu
@@ -106,7 +114,7 @@ const Navbar = () => {
       >
         <MenuItem>Profile</MenuItem>
         <MenuItem>My account</MenuItem>
-        <MenuItem>Logout</MenuItem>
+        <MenuItem onClick={handleLogout}>Logout</MenuItem>
       </Menu>
     </AppBar>
   );

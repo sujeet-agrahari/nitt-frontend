@@ -1,134 +1,97 @@
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Fab,
-  FormControl,
-  Input,
-  InputAdornment,
-  InputLabel,
-} from "@mui/material";
+import * as yup from 'yup';
 
-import { useEffect, useState } from "react";
+import { Grid, InputAdornment } from '@mui/material';
+import { useForm } from 'react-hook-form';
+import ApiConfig from 'src/api/api-config';
+import ControlledTextInput from 'src/components/mui-react-hook-form/ControlledTextInput';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { CurrencyRupee } from '@mui/icons-material';
+import FormDialog from 'src/components/form-dialog/FormDialog';
+import ControlledDatePicker from 'src/components/mui-react-hook-form/ControlledDatePicker';
+import ControlledAutoComplete from 'src/components/mui-react-hook-form/ControlledAutoComplete';
+import { useAlert } from 'react-alert';
+import axiosHook from '../../api/axios-hook';
 
-import { Controller, useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
-import { Add } from "@mui/icons-material";
-import { addDocument, getDocuments } from "../../firebase";
-import ControlledAutoComplete from "../../components/mui-react-hook-form/ControlledAutoComplete";
+const schema = yup.object({
+  enrollmentId: yup.mixed().required('Field is required!'),
+  paidFees: yup.number().positive().integer().required('Field is required!').typeError('Field is required!'),
+  paidOn: yup.date().typeError('Invalid date').required('Field is required').default(new Date()),
+  medium: yup.string().default('Cash'),
+  receiptNo: yup.string(),
+});
 
-const schema = yup
-  .object({
-    paidFees: yup
-      .number()
-      .typeError("")
-      .positive()
-      .integer()
-      .required("Field is required!"),
-    enrollmentId: yup.mixed().required("Please select student!"),
-  })
-  .required();
+export const AddFees = ({ open, setOpen, refetchFees }) => {
+  const alert = useAlert();
 
-export default function AddFees() {
-  const {
-    control,
-    formState: { errors },
-    handleSubmit,
-  } = useForm({
+  const { control, handleSubmit } = useForm({
     resolver: yupResolver(schema),
-    mode: "all",
+    mode: 'all',
   });
+  const [{ data: enrollments = [] }] = axiosHook(ApiConfig.ENROLLMENT.GET_ENROLLMENTS.url);
 
-  const [enrollments, setEnrollments] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [, executeAdd] = axiosHook(
+    {
+      ...ApiConfig.FEES.POST_FEES,
+    },
+    { manual: true }
+  );
 
-  const handleClickOpen = () => {
-    setOpen(true);
+  const addFees = () => {
+    handleSubmit(async (data) => {
+      data.enrollmentId = data.enrollmentId.id;
+      try {
+        await executeAdd({
+          data,
+        });
+        await refetchFees();
+        setOpen(false);
+        alert.success('Fees is added!');
+      } catch (error) {
+        alert.error(error.response.data.message);
+      }
+    })();
   };
-
   const handleClose = () => {
     setOpen(false);
   };
-
-  useEffect(() => {
-    const fetchStudents = async () => {
-      const enrollments = await getDocuments({
-        collectionName: "enrollments",
-      });
-      for (const enrollment of enrollments) {
-        enrollment.student = await getDocuments({
-          collectionName: "students",
-          fetchSingle: true,
-          whereConditions: {
-            id: enrollment.studentId,
-          },
-        });
-      }
-      setEnrollments(enrollments);
-    };
-    fetchStudents();
-  }, []);
-
-  const handleFeesAdd = async (data) => {
-    await addDocument({
-      collectionName: "fees",
-      fields: {
-        paidFees: data.paidFees,
-        enrollmentId: data.enrollmentId.id,
-      },
-    });
-    setOpen(false);
-  };
-
   return (
-    <Box>
-      <Fab color="primary" aria-label="add" onClick={handleClickOpen}>
-        <Add />
-      </Fab>
-
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Submit Fees</DialogTitle>
-        <DialogContent>
+    <FormDialog isOpen={open} handleClose={handleClose} title="Add Fees" handleConfirm={addFees}>
+      <Grid container spacing={4} textAlign="center">
+        <Grid item xs={6}>
           <ControlledAutoComplete
             control={control}
             name="enrollmentId"
             options={enrollments}
-            getOptionLabel={(option) => `${option.student.firstName}`}
+            getOptionLabel={(option) => option.Student?.User?.phone}
             label="Select Students"
-            errors={errors}
             defaultValue={null}
           />
-          <Controller
-            name="paidFees"
+        </Grid>
+        <Grid item xs={6}>
+          <ControlledTextInput
+            name={'paidFees'}
             control={control}
-            defaultValue=""
-            render={({ field }) => (
-              <FormControl fullWidth sx={{ m: 1 }} variant="standard">
-                <InputLabel htmlFor="standard-adornment-amount">
-                  Paid Fees
-                </InputLabel>
-                <Input
-                  {...field}
-                  name="paidFees"
-                  id="standard-adornment-amount"
-                  error={Boolean(errors.paidFees)}
-                  startAdornment={
-                    <InputAdornment position="start">₹</InputAdornment>
-                  }
-                />
-              </FormControl>
-            )}
+            label="Paid Fees"
+            type="number"
+            inputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <CurrencyRupee />
+                </InputAdornment>
+              ),
+            }}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSubmit(handleFeesAdd)}>Submit</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        </Grid>
+        <Grid item xs={6}>
+          <ControlledTextInput name={'medium'} control={control} label="Payment Medium" />
+        </Grid>
+        <Grid item xs={6}>
+          <ControlledTextInput name={'receiptNo'} control={control} label="Receipt No" />
+        </Grid>
+        <Grid item sm={6}>
+          <ControlledDatePicker name={'paidOn'} label="Paid On" disableFuture control={control} />
+        </Grid>
+      </Grid>
+    </FormDialog>
   );
-}
+};

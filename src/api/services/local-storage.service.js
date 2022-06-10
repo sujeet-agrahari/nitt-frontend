@@ -4,6 +4,7 @@ const getUser = () => {
 };
 const LocalStorageService = {
   getUser,
+  /* A function that returns the accessToken of the user. */
   getAccessToken: () => {
     const user = getUser();
     return user ? user.accessToken : null;

@@ -3,7 +3,7 @@ const ApiConfig = {
     GET_COURSES: {
       url: '/courses',
     },
-    ADD_COURSE: {
+    POST_COURSE: {
       url: '/courses',
       method: 'POST',
     },
@@ -19,6 +19,10 @@ const ApiConfig = {
     GET_TOTAL: {
       url: '/fees/total',
     },
+    POST_FEES: {
+      url: '/fees',
+      method: 'POST',
+    },
   },
   STUDENT: {
     GET_STUDENTS: {
@@ -28,6 +32,14 @@ const ApiConfig = {
   ENROLLMENT: {
     GET_ENROLLMENTS: {
       url: '/enrollments',
+    },
+    POST_ENROLLMENT: {
+      url: '/enrollments',
+      method: 'POST',
+    },
+    PUT_ENROLLMENT: {
+      url: '/enrollments',
+      method: 'PUT',
     },
   },
   AUTH: {

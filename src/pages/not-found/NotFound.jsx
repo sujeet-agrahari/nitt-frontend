@@ -19,7 +19,7 @@ const NotFound = () => (
       sx={{ height: 260, mx: 'auto', my: { xs: 5, sm: 10 } }}
     />
 
-    <Button to="/" size="large" variant="contained" component={Link}>
+    <Button to="/dashboard" size="large" variant="contained" component={Link}>
       Go to Home
     </Button>
   </Container>
