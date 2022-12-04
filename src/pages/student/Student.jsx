@@ -127,7 +127,7 @@ const Student = () => {
             <Stack flexDirection={'row'} gap={2}>
               <GridActionsCellItem
                 icon={<Visibility color="primary" />}
-                onClick={() => navigate(`/students/${enrollment.id}`, { state: enrollment })}
+                onClick={() => navigate(`${enrollment.id}`, { state: enrollment })}
                 label="Edit"
               />
             </Stack>
@@ -139,7 +139,7 @@ const Student = () => {
   return (
     <Layout>
       <Box padding={2} width="100%">
-        <PageTitle pageTitle="Students" addButton to="/students/new" />
+        <PageTitle pageTitle="Students" addButton to="new" />
         <MuiDataTable
           data={getStudents(enrollments)}
           columns={columns}
