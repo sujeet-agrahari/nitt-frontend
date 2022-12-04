@@ -12,7 +12,6 @@ import SingleStudent from './pages/student/SingleStudent';
 import Dashboard from './pages/Dashboard/Dashboard';
 import NotFound from './pages/not-found/NotFound';
 import ErrorTemplate from './components/error/ErrorTemplate';
-import Home from './pages/home/Home';
 
 const options = {
   position: positions.BOTTOM_CENTER,
@@ -32,7 +31,7 @@ function App() {
       <AlertProvider template={ErrorTemplate} {...options}>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" />
             <Route path="login" element={<Login />} />
             <Route path="dashboard">
               <Route
